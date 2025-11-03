@@ -12,6 +12,7 @@ import AuthProvider from './context/AuthProvider.jsx';
 import Register from './component/authentication-page/Register.jsx';
 import MyProducts from './component/my-product/MyProducts.jsx';
 import MyBids from './component/my-bids/MyBids.jsx';
+import ProductDetails from './component/my-product/ProductDetails.jsx';
 
 const router = createBrowserRouter([
   {
@@ -41,15 +42,21 @@ const router = createBrowserRouter([
       {
         path: '/myBids',
         element: <MyBids></MyBids>
+      },
+
+      {
+        path: "/productDetails/:id",
+        loader: ({params}) => fetch(`http://localhost:3000/products/${params.id}`),
+        element: <ProductDetails></ProductDetails>
       }
     ]
-  },
+  }
 ]);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
-      <RouterProvider router={router} />,
+      <RouterProvider router={router} />
     </AuthProvider>
-  </StrictMode>,
+  </StrictMode>
 )

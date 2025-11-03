@@ -4,7 +4,7 @@ import Navbar from '../component/reuseble-component/Navbar'
 
 export default function RootLayout() {
   return (
-    <div>
+    <div className='container mx-auto'>
         <Navbar></Navbar>
         <Outlet></Outlet>
     </div>
