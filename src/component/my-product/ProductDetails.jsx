@@ -1,13 +1,11 @@
-import React, { useRef, useState } from "react";
+import React, { use, useEffect, useRef, useState } from "react";
 import { useLoaderData, Link } from "react-router";
+import { Authcontext } from "../../context/AuthContext";
+import Swal from "sweetalert2";
 
 export default function ProductDetails() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const handleOpenModal = () => setIsModalOpen(true);
-  // Modal বন্ধ করার ফাংশন
-  const handleCloseModal = () => setIsModalOpen(false);
   const product = useLoaderData();
-
+  const [bids, setBids] = useState([])
   const {
     _id,
     title,
@@ -26,16 +24,82 @@ export default function ProductDetails() {
     description,
     seller_contact,
   } = product;
+  const { user } = use(Authcontext);
 
-  // ছবির মতো করে প্রাইসিং ডিসপ্লে
+  useEffect(() => {
+    fetch(`http://localhost:3000/products/bids/${product._id}`)
+    .then(res => res.json())
+    .then(data => {
+      console.log("bids for products", data)
+      setBids(data)
+    })
+  }, [product])
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
+
+
   const priceDisplay = `$${price_min} - ${price_max}`;
-  // পোস্ট করার তারিখ ফরম্যাট করা (ছবিতে 10/19/2024 এর মতো)
+
   const postedDate = created_at
     ? new Date(created_at).toLocaleDateString("en-US")
     : "N/A";
 
+  const handleBidSubmit = (e) => {
+    e.preventDefault();
+    const name = e.target.name.value;
+    const email = e.target.email.value;
+    const price = e.target.price.value;
+
+    const newBid = {
+      product: product._id,
+      buyer_name: name,
+      buyer_email: email,
+      bid_price: price,
+      status: "pending",
+    };
+
+    fetch("http://localhost:3000/bids", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(newBid),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.insertedId) {
+          Swal.fire({
+            title: "✅ Bid Placed!",
+            text: "Your bid has been successfully submitted.",
+            icon: "success",
+            confirmButtonColor: "#6D28D9",
+            confirmButtonText: "OK",
+            background: "#f9f9ff",
+            customClass: {
+              popup: "rounded-xl shadow-2xl",
+            },
+          }).then(() => {
+            handleCloseModal();
+          });
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "Something went wrong! Please try again.",
+          });
+        }
+      })
+      .catch(() => {
+        Swal.fire({
+          icon: "error",
+          title: "Server Error",
+          text: "Unable to connect to server. Try again later.",
+        });
+      });
+  };
+
   return (
-    // মূল কন্টেইনার - ছবির মতো হালকা ধূসর ব্যাকগ্রাউন্ড
     <div className="bg-gray-100 min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Back To Products Link */}
@@ -61,12 +125,8 @@ export default function ProductDetails() {
             Back To Products
           </Link>
         </div>
-
-        {/* Main Layout Grid - ছোট স্ক্রিনে ১ কলাম, মাঝারি স্ক্রিনে ২ কলাম */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Left Column - Image & Description */}
           <div className="space-y-8">
-            {/* Product Image Placeholder */}
             <div className="bg-gray-200 h-96 w-full rounded-lg overflow-hidden flex items-center justify-center">
               {image ? (
                 <img
@@ -212,7 +272,6 @@ export default function ProductDetails() {
                 I Want Buy This Product
               </button>
 
-              {/* Modal Component - isModalOpen এর ওপর ভিত্তি করে শর্তসাপেক্ষে রেন্ডার হবে */}
               <div className={`modal ${isModalOpen ? "modal-open" : ""}`}>
                 <div className="modal-box w-11/12 max-w-2xl p-6 bg-white rounded-lg shadow-2xl">
                   {/* Modal Title */}
@@ -220,14 +279,7 @@ export default function ProductDetails() {
                     Give Seller Your Offered Price
                   </h3>
 
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleCloseModal();
-                      alert("Bid Submitted!");
-                    }}
-                  >
-                    {/* Buyer Name & Email (পাশাপাশি) */}
+                  <form onSubmit={handleBidSubmit}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       {/* Buyer Name */}
                       <label className="form-control w-full">
@@ -236,6 +288,9 @@ export default function ProductDetails() {
                         </span>
                         <input
                           type="text"
+                          name="name"
+                          readOnly
+                          defaultValue={user?.displayName}
                           placeholder="Your Name"
                           className="input input-bordered w-full"
                           required
@@ -248,6 +303,9 @@ export default function ProductDetails() {
                         </span>
                         <input
                           type="email"
+                          name="email"
+                          readOnly
+                          defaultValue={user?.email}
                           placeholder="Your Email"
                           className="input input-bordered w-full"
                           required
@@ -262,6 +320,7 @@ export default function ProductDetails() {
                       </span>
                       <input
                         type="number"
+                        name="price"
                         placeholder="e.g. 50000"
                         className="input input-bordered w-full"
                         required
@@ -269,17 +328,18 @@ export default function ProductDetails() {
                     </label>
 
                     {/* Contact Info */}
-                    <label className="form-control w-full mb-6">
+                    {/* <label className="form-control w-full mb-6">
                       <span className="label-text mb-1 font-medium">
                         Contact Info
                       </span>
                       <input
                         type="text"
+                        name="contact"
                         placeholder="e.g. +8801..."
                         className="input input-bordered w-full"
                         required
                       />
-                    </label>
+                    </label> */}
 
                     {/* Modal Actions/Buttons */}
                     <div className="modal-action flex justify-end gap-3">

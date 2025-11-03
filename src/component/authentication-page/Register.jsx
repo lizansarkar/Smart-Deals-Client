@@ -81,7 +81,6 @@ export default function Register() {
             </svg>
             Login with Google
           </button>
-          
         </div>
       </div>
     </div>
