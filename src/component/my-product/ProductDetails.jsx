@@ -2,10 +2,11 @@ import React, { use, useEffect, useRef, useState } from "react";
 import { useLoaderData, Link } from "react-router";
 import { Authcontext } from "../../context/AuthContext";
 import Swal from "sweetalert2";
+import BidsProduct from "./BidsProduct";
 
 export default function ProductDetails() {
   const product = useLoaderData();
-  const [bids, setBids] = useState([])
+  const [bids, setBids] = useState([]);
   const {
     _id,
     title,
@@ -26,18 +27,31 @@ export default function ProductDetails() {
   } = product;
   const { user } = use(Authcontext);
 
-  useEffect(() => {
-    fetch(`http://localhost:3000/products/bids/${product._id}`)
-    .then(res => res.json())
-    .then(data => {
-      console.log("bids for products", data)
-      setBids(data)
-    })
-  }, [product])
+  const fetchBids = () => {
+        fetch(`http://localhost:3000/products/bids/${product._id}`)
+        .then(res => res.json())
+        .then(data => {
+            console.log("bids for products", data);
+            setBids(data);
+        })
+        .catch(error => console.error("Failed to fetch bids:", error));
+    };
+
+    useEffect(() => {
+        fetchBids();
+    }, [product]);
+
+  // useEffect(() => {
+  //   fetch(`http://localhost:3000/products/bids/${product._id}`)
+  //     .then((res) => res.json())
+  //     .then((data) => {
+  //       console.log("bids for products", data);
+  //       setBids(data);
+  //     });
+  // }, [product]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
-
 
   const priceDisplay = `$${price_min} - ${price_max}`;
 
@@ -55,9 +69,11 @@ export default function ProductDetails() {
       product: product._id,
       buyer_name: name,
       buyer_email: email,
-      bid_price: price,
+      bid_price: parseInt(price),
       status: "pending",
     };
+
+    console.log(typeof newBid.bid_price)
 
     fetch("http://localhost:3000/bids", {
       method: "POST",
@@ -81,6 +97,7 @@ export default function ProductDetails() {
             },
           }).then(() => {
             handleCloseModal();
+            fetchBids();
           });
         } else {
           Swal.fire({
@@ -368,6 +385,10 @@ export default function ProductDetails() {
             </div>
           </div>
         </div>
+
+        {/* {user?.email === email && ( */}
+          <BidsProduct bids={bids} productTitle={title} />
+        {/* )} */}
       </div>
     </div>
   );
